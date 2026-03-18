@@ -1,19 +1,25 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { User, Fuel, Download, Upload, Info, ChevronRight, AlertTriangle, Check } from 'lucide-react'
+import { User, Fuel, Download, Upload, Info, ChevronRight, AlertTriangle, Check, IdCard, MapPin, Calendar, Heart } from 'lucide-react'
 import { toast } from 'sonner'
 import { useApp } from '@/lib/context'
 import { exportBackup, importBackup } from '@/lib/store'
 
 export function SettingsPage() {
-  const { data, updateSettings, setData } = useApp()
+  const { data, updateSettings, updateUserProfile, setData } = useApp()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState(data.userName)
   const [defaultPrice, setDefaultPrice] = useState(data.defaultFuelPrice.toString())
+  const [dob, setDob] = useState(data.userProfile.dateOfBirth ?? '')
+  const [licenseNumber, setLicenseNumber] = useState(data.userProfile.licenseNumber ?? '')
+  const [licenseExpiry, setLicenseExpiry] = useState(data.userProfile.licenseExpiry ?? '')
+  const [address, setAddress] = useState(data.userProfile.address ?? '')
+
   const [nameSaved, setNameSaved] = useState(false)
   const [priceSaved, setPriceSaved] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
   const [showBackupConfirm, setShowBackupConfirm] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -33,6 +39,18 @@ export function SettingsPage() {
     setPriceSaved(true)
     toast('Default price updated')
     setTimeout(() => setPriceSaved(false), 2000)
+  }
+
+  function saveProfile() {
+    updateUserProfile({
+      dateOfBirth: dob || undefined,
+      licenseNumber: licenseNumber || undefined,
+      licenseExpiry: licenseExpiry || undefined,
+      address: address || undefined,
+    })
+    setProfileSaved(true)
+    toast('Profile updated')
+    setTimeout(() => setProfileSaved(false), 2000)
   }
 
   function handleBackup() {
@@ -62,7 +80,7 @@ export function SettingsPage() {
     setShowRestoreConfirm(false)
   }
 
-  const inputClass = "flex-1 px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+  const inputClass = "w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,7 +90,7 @@ export function SettingsPage() {
         <p className="text-muted-foreground text-sm mt-0.5">Manage your preferences</p>
       </div>
 
-      <div className="px-5 pb-36 flex flex-col gap-5">
+      <div className="px-5 pb-40 flex flex-col gap-5">
         {/* Profile */}
         <section className="clay-card p-5 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-1">
@@ -89,7 +107,7 @@ export function SettingsPage() {
                 value={name}
                 onChange={e => { setName(e.target.value); setNameSaved(false) }}
                 placeholder="Your name"
-                className={inputClass}
+                className="flex-1 px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
               />
               <button
                 onClick={saveName}
@@ -107,6 +125,72 @@ export function SettingsPage() {
           </div>
         </section>
 
+        {/* Personal Details */}
+        <section className="clay-card p-5 flex flex-col gap-4">
+          <div className="flex items-center gap-2 mb-1">
+            <IdCard size={16} strokeWidth={1.75} className="text-primary" />
+            <h2 className="text-sm font-bold text-foreground">Personal Details</h2>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Calendar size={12} strokeWidth={2} /> Date of Birth
+            </label>
+            <input
+              type="date"
+              value={dob}
+              onChange={e => setDob(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <IdCard size={12} strokeWidth={2} /> License Number
+            </label>
+            <input
+              type="text"
+              value={licenseNumber}
+              onChange={e => setLicenseNumber(e.target.value)}
+              placeholder="e.g. DL-1420110012345"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Calendar size={12} strokeWidth={2} /> License Expiry
+            </label>
+            <input
+              type="date"
+              value={licenseExpiry}
+              onChange={e => setLicenseExpiry(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <MapPin size={12} strokeWidth={2} /> Address
+            </label>
+            <textarea
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder="Your address"
+              rows={2}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+
+          <button
+            onClick={saveProfile}
+            className="w-full py-3.5 rounded-2xl font-semibold text-white text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+            style={{ background: profileSaved ? 'oklch(0.65 0.15 145)' : 'oklch(0.55 0.18 250)', boxShadow: `0 4px 16px ${profileSaved ? 'oklch(0.65 0.15 145 / 0.3)' : 'oklch(0.55 0.18 250 / 0.3)'}` }}
+          >
+            {profileSaved ? <><Check size={16} strokeWidth={2} /> Saved</> : 'Save Profile'}
+          </button>
+        </section>
+
         {/* Fuel preferences */}
         <section className="clay-card p-5 flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-1">
@@ -115,7 +199,7 @@ export function SettingsPage() {
           </div>
           <div>
             <label htmlFor="defaultPrice" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Default Fuel Price (₹/L)
+              Default Fuel Price (per L)
             </label>
             <div className="flex gap-2">
               <input
@@ -124,7 +208,7 @@ export function SettingsPage() {
                 value={defaultPrice}
                 onChange={e => { setDefaultPrice(e.target.value); setPriceSaved(false) }}
                 placeholder="e.g. 105"
-                className={inputClass}
+                className="flex-1 px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
               />
               <button
                 onClick={savePrice}
@@ -188,6 +272,8 @@ export function SettingsPage() {
             { label: 'Vehicles', value: `${data.vehicles.length}` },
             { label: 'Fuel Logs', value: `${data.fuelLogs.length}` },
             { label: 'Service Logs', value: `${data.serviceLogs.length}` },
+            { label: 'Reminders', value: `${data.reminders.length}` },
+            { label: 'Documents', value: `${data.documents.length}` },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{label}</span>
@@ -195,6 +281,17 @@ export function SettingsPage() {
             </div>
           ))}
         </section>
+
+        {/* Developer credit footer */}
+        <footer className="flex flex-col items-center gap-3 py-6">
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <span>Made with</span>
+            <Heart size={12} strokeWidth={2} className="text-destructive fill-destructive" />
+            <span>by</span>
+            <span className="font-semibold text-foreground">AutoTrackPro Team</span>
+          </div>
+          <p className="text-muted-foreground text-xs">2024 AutoTrackPro. All rights reserved.</p>
+        </footer>
       </div>
 
       {/* Backup confirmation dialog */}

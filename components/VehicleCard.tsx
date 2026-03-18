@@ -1,8 +1,8 @@
 'use client'
 
-import { Car, Bike, Zap, AlertCircle } from 'lucide-react'
-import type { Vehicle } from '@/lib/store'
-import { needsOdometerUpdate } from '@/lib/store'
+import { Car, Bike, Zap, AlertCircle, Bell } from 'lucide-react'
+import type { Vehicle, Reminder, VehicleDocument } from '@/lib/store'
+import { needsOdometerUpdate, isReminderOverdue, isDocumentExpired, isDocumentExpiringSoon } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
 const vehicleIcons = {
@@ -21,14 +21,21 @@ const fuelBadge = {
 
 interface VehicleCardProps {
   vehicle: Vehicle
+  reminders: Reminder[]
+  documents: VehicleDocument[]
   onClick: () => void
 }
 
-export function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
+export function VehicleCard({ vehicle, reminders, documents, onClick }: VehicleCardProps) {
   const Icon = vehicleIcons[vehicle.type] || Car
   const badge = fuelBadge[vehicle.fuelType]
   const isElectric = vehicle.fuelType === 'electric'
   const pendingUpdate = needsOdometerUpdate(vehicle)
+  
+  // Count overdue/expiring items
+  const overdueReminders = reminders.filter(isReminderOverdue).length
+  const expiringDocs = documents.filter(d => isDocumentExpired(d) || isDocumentExpiringSoon(d)).length
+  const totalAlerts = overdueReminders + expiringDocs
 
   return (
     <button
@@ -52,12 +59,20 @@ export function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-bold text-foreground text-base leading-tight truncate">{vehicle.name}</h3>
-          {pendingUpdate && (
-            <div className="flex items-center gap-1 bg-[oklch(0.95_0.05_25)] text-[oklch(0.45_0.18_25)] text-[10px] font-semibold px-2 py-1 rounded-full shrink-0">
-              <AlertCircle size={10} strokeWidth={2} />
-              Pending
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {totalAlerts > 0 && (
+              <div className="flex items-center gap-1 bg-[oklch(0.93_0.05_60)] text-[oklch(0.42_0.10_60)] text-[10px] font-semibold px-2 py-1 rounded-full">
+                <Bell size={10} strokeWidth={2} />
+                {totalAlerts}
+              </div>
+            )}
+            {pendingUpdate && (
+              <div className="flex items-center gap-1 bg-[oklch(0.95_0.05_25)] text-[oklch(0.45_0.18_25)] text-[10px] font-semibold px-2 py-1 rounded-full">
+                <AlertCircle size={10} strokeWidth={2} />
+                Pending
+              </div>
+            )}
+          </div>
         </div>
         <p className="text-muted-foreground text-xs mt-0.5 truncate">{vehicle.brand} {vehicle.model}</p>
         <div className="flex items-center gap-2 mt-2">

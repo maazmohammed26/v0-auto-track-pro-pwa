@@ -1,7 +1,20 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { AppData, Vehicle, FuelLog, ServiceLog, loadData, saveData, generateId, needsOdometerUpdate } from './store'
+import React, { createContext, useContext, useState, useCallback } from 'react'
+import {
+  AppData,
+  Vehicle,
+  FuelLog,
+  ServiceLog,
+  Reminder,
+  VehicleDocument,
+  UserProfile,
+  loadData,
+  saveData,
+  generateId,
+  needsOdometerUpdate,
+  isReminderOverdue,
+} from './store'
 
 interface AppContextValue {
   data: AppData
@@ -17,8 +30,18 @@ interface AppContextValue {
   updateServiceLog: (id: string, updates: Partial<ServiceLog>) => void
   deleteServiceLog: (id: string) => void
   updateSettings: (settings: Partial<Pick<AppData, 'userName' | 'defaultFuelPrice'>>) => void
+  updateUserProfile: (profile: Partial<UserProfile>) => void
+  addReminder: (r: Omit<Reminder, 'id' | 'createdAt' | 'isCompleted'>) => Reminder
+  updateReminder: (id: string, updates: Partial<Reminder>) => void
+  deleteReminder: (id: string) => void
+  completeReminder: (id: string) => void
+  addDocument: (d: Omit<VehicleDocument, 'id' | 'createdAt'>) => VehicleDocument
+  updateDocument: (id: string, updates: Partial<VehicleDocument>) => void
+  deleteDocument: (id: string) => void
   setData: (data: AppData) => void
+  setPwaPromptShown: () => void
   vehiclesNeedingOdometerUpdate: Vehicle[]
+  overdueReminders: Reminder[]
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -55,6 +78,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       vehicles: data.vehicles.filter(v => v.id !== id),
       fuelLogs: data.fuelLogs.filter(l => l.vehicleId !== id),
       serviceLogs: data.serviceLogs.filter(l => l.vehicleId !== id),
+      reminders: data.reminders.filter(r => r.vehicleId !== id),
+      documents: data.documents.filter(d => d.vehicleId !== id),
     })
   }, [data, persist])
 
@@ -135,11 +160,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     persist({ ...data, ...settings })
   }, [data, persist])
 
+  const updateUserProfile = useCallback((profile: Partial<UserProfile>) => {
+    persist({ ...data, userProfile: { ...data.userProfile, ...profile } })
+  }, [data, persist])
+
+  // Reminders
+  const addReminder = useCallback((r: Omit<Reminder, 'id' | 'createdAt' | 'isCompleted'>) => {
+    const reminder: Reminder = { ...r, id: generateId(), createdAt: new Date().toISOString(), isCompleted: false }
+    persist({ ...data, reminders: [...data.reminders, reminder] })
+    return reminder
+  }, [data, persist])
+
+  const updateReminder = useCallback((id: string, updates: Partial<Reminder>) => {
+    persist({ ...data, reminders: data.reminders.map(r => r.id === id ? { ...r, ...updates } : r) })
+  }, [data, persist])
+
+  const deleteReminder = useCallback((id: string) => {
+    persist({ ...data, reminders: data.reminders.filter(r => r.id !== id) })
+  }, [data, persist])
+
+  const completeReminder = useCallback((id: string) => {
+    persist({ ...data, reminders: data.reminders.map(r => r.id === id ? { ...r, isCompleted: true } : r) })
+  }, [data, persist])
+
+  // Documents
+  const addDocument = useCallback((d: Omit<VehicleDocument, 'id' | 'createdAt'>) => {
+    const doc: VehicleDocument = { ...d, id: generateId(), createdAt: new Date().toISOString() }
+    persist({ ...data, documents: [...data.documents, doc] })
+    return doc
+  }, [data, persist])
+
+  const updateDocument = useCallback((id: string, updates: Partial<VehicleDocument>) => {
+    persist({ ...data, documents: data.documents.map(d => d.id === id ? { ...d, ...updates } : d) })
+  }, [data, persist])
+
+  const deleteDocument = useCallback((id: string) => {
+    persist({ ...data, documents: data.documents.filter(d => d.id !== id) })
+  }, [data, persist])
+
   const setData = useCallback((newData: AppData) => {
     persist(newData)
   }, [persist])
 
+  const setPwaPromptShown = useCallback(() => {
+    persist({ ...data, pwaPromptShown: true })
+  }, [data, persist])
+
   const vehiclesNeedingOdometerUpdate = data.vehicles.filter(needsOdometerUpdate)
+  const overdueReminders = data.reminders.filter(isReminderOverdue)
 
   return (
     <AppContext.Provider value={{
@@ -156,8 +224,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateServiceLog,
       deleteServiceLog,
       updateSettings,
+      updateUserProfile,
+      addReminder,
+      updateReminder,
+      deleteReminder,
+      completeReminder,
+      addDocument,
+      updateDocument,
+      deleteDocument,
       setData,
+      setPwaPromptShown,
       vehiclesNeedingOdometerUpdate,
+      overdueReminders,
     }}>
       {children}
     </AppContext.Provider>

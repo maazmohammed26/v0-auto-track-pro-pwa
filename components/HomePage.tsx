@@ -68,6 +68,8 @@ export function HomePage({ onSelectVehicle, onGoToSettings }: HomePageProps) {
               <VehicleCard
                 key={vehicle.id}
                 vehicle={vehicle}
+                reminders={data.reminders.filter(r => r.vehicleId === vehicle.id && !r.isCompleted)}
+                documents={data.documents.filter(d => d.vehicleId === vehicle.id)}
                 onClick={() => onSelectVehicle(vehicle.id)}
               />
             ))}

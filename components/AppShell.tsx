@@ -9,21 +9,23 @@ import { InsightsPage } from './InsightsPage'
 import { SettingsPage } from './SettingsPage'
 import { VehicleDetail } from './VehicleDetail'
 import { OdometerReminder } from './OdometerReminder'
-import { Gauge } from 'lucide-react'
+import { LoadingScreen } from './LoadingScreen'
+import { PwaInstallPrompt } from './PwaInstallPrompt'
 
 type Tab = 'home' | 'insights' | 'settings'
 
 export function AppShell() {
-  const { data, vehiclesNeedingOdometerUpdate } = useApp()
+  const { data, vehiclesNeedingOdometerUpdate, setPwaPromptShown } = useApp()
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null)
   const [showReminder, setShowReminder] = useState(false)
   const [splashDone, setSplashDone] = useState(false)
   const [reminderDismissed, setReminderDismissed] = useState(false)
+  const [showPwaPrompt, setShowPwaPrompt] = useState(false)
 
   // Splash animation
   useEffect(() => {
-    const t = setTimeout(() => setSplashDone(true), 1200)
+    const t = setTimeout(() => setSplashDone(true), 2000)
     return () => clearTimeout(t)
   }, [])
 
@@ -35,31 +37,26 @@ export function AppShell() {
     }
   }, [splashDone, data.onboardingComplete, vehiclesNeedingOdometerUpdate.length, reminderDismissed])
 
-  // Splash screen
+  // Show PWA prompt for first-time users after onboarding completes
+  useEffect(() => {
+    if (splashDone && data.onboardingComplete && !data.pwaPromptShown) {
+      // Check if not already installed as PWA
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      if (!isStandalone) {
+        const t = setTimeout(() => setShowPwaPrompt(true), 800)
+        return () => clearTimeout(t)
+      }
+    }
+  }, [splashDone, data.onboardingComplete, data.pwaPromptShown])
+
+  function handlePwaPromptDismiss() {
+    setShowPwaPrompt(false)
+    setPwaPromptShown()
+  }
+
+  // Loading screen
   if (!splashDone) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <div
-          className="w-20 h-20 rounded-3xl flex items-center justify-center"
-          style={{ background: 'oklch(0.55 0.18 250)', boxShadow: '0 8px 32px oklch(0.55 0.18 250 / 0.4)' }}
-        >
-          <Gauge size={40} strokeWidth={1.5} className="text-white" />
-        </div>
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground">AutoTrackPro</h1>
-          <p className="text-muted-foreground text-sm mt-1">Loading your vehicles...</p>
-        </div>
-        <div className="flex gap-1.5 mt-2">
-          {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
-              style={{ animationDelay: `${i * 200}ms` }}
-            />
-          ))}
-        </div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   // Onboarding
@@ -111,6 +108,9 @@ export function AppShell() {
           onDismiss={() => { setShowReminder(false); setReminderDismissed(true) }}
         />
       )}
+
+      {/* PWA install prompt */}
+      {showPwaPrompt && <PwaInstallPrompt onDismiss={handlePwaPromptDismiss} />}
     </div>
   )
 }
