@@ -1,0 +1,17 @@
+{
+  "name": "AutoTrackPro",
+  "short_name": "AutoTrack",
+  "description": "Personal vehicle management — track fuel, service, and expenses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F4F0",
+  "theme_color": "#F5F4F0",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+}

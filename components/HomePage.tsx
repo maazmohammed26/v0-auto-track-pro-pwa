@@ -1,0 +1,83 @@
+'use client'
+
+import { useState } from 'react'
+import { Plus, Car } from 'lucide-react'
+import { useApp } from '@/lib/context'
+import { VehicleCard } from './VehicleCard'
+import { AddVehicleForm } from './AddVehicleForm'
+
+interface HomePageProps {
+  onSelectVehicle: (vehicleId: string) => void
+}
+
+export function HomePage({ onSelectVehicle }: HomePageProps) {
+  const { data } = useApp()
+  const [showAddVehicle, setShowAddVehicle] = useState(false)
+
+  const firstName = data.userName.split(' ')[0]
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  return (
+    <div className="min-h-screen bg-background relative">
+      {/* Header */}
+      <div className="px-5 pt-14 pb-6">
+        <p className="text-sm text-muted-foreground font-medium">{greeting},</p>
+        <h1 className="text-2xl font-bold text-foreground text-balance">{firstName} 👋</h1>
+      </div>
+
+      {/* Vehicles section */}
+      <div className="px-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-foreground">My Vehicles</h2>
+          <span className="text-xs text-muted-foreground font-medium bg-secondary px-2.5 py-1 rounded-full">
+            {data.vehicles.length} {data.vehicles.length === 1 ? 'vehicle' : 'vehicles'}
+          </span>
+        </div>
+
+        {data.vehicles.length === 0 ? (
+          <div
+            className="clay-card p-10 flex flex-col items-center gap-4 text-center"
+            role="region"
+            aria-label="No vehicles added"
+          >
+            <div className="w-16 h-16 rounded-3xl bg-secondary flex items-center justify-center">
+              <Car size={28} strokeWidth={1.5} className="text-primary" />
+            </div>
+            <div>
+              <p className="font-bold text-foreground mb-1">No vehicles yet</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Tap the + button below to add your first vehicle.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 pb-32">
+            {data.vehicles.map(vehicle => (
+              <VehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                onClick={() => onSelectVehicle(vehicle.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* FAB */}
+      <button
+        onClick={() => setShowAddVehicle(true)}
+        className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center text-white transition-all active:scale-90"
+        style={{
+          background: 'oklch(0.55 0.18 250)',
+          boxShadow: '0 6px 24px oklch(0.55 0.18 250 / 0.45)',
+        }}
+        aria-label="Add new vehicle"
+      >
+        <Plus size={24} strokeWidth={2} />
+      </button>
+
+      {showAddVehicle && <AddVehicleForm onClose={() => setShowAddVehicle(false)} />}
+    </div>
+  )
+}
