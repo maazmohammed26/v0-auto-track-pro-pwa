@@ -46,7 +46,7 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
   const [model, setModel] = useState(editVehicle?.model ?? '')
   const [type, setType] = useState<VehicleType>(editVehicle?.type ?? 'car')
   const [fuelType, setFuelType] = useState<FuelType>(editVehicle?.fuelType ?? 'petrol')
-  const [odometer, setOdometer] = useState(editVehicle?.currentOdometer?.toString() ?? '0')
+  const [odometer, setOdometer] = useState(editVehicle?.currentOdometer?.toString() ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   function validate() {
