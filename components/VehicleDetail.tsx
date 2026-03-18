@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Fuel, Wrench, Gauge, Edit2, Trash2, Plus, Zap, Bell, FileText, Check, ExternalLink, AlertTriangle, Calendar } from 'lucide-react'
+import { ArrowLeft, Fuel, Wrench, Gauge, Edit2, Trash2, Plus, Zap, Bell, FileText, Check, ExternalLink, AlertTriangle, Calendar, Eye, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useApp } from '@/lib/context'
 import type { Vehicle, FuelLog, ServiceLog, Reminder, VehicleDocument } from '@/lib/store'
@@ -80,6 +80,112 @@ function ExternalLinkWarning({ url, onConfirm, onCancel }: { url: string; onConf
   )
 }
 
+function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
+  if (value === undefined || value === null || value === '') return null
+  return (
+    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-border last:border-0">
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">{label}</span>
+      <span className="text-sm font-medium text-foreground text-right">{value}</span>
+    </div>
+  )
+}
+
+function DetailModal({ title, icon, onClose, children }: { title: string; icon: React.ReactNode; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/25 backdrop-blur-[2px]">
+      <div
+        className="w-full max-w-md bg-card rounded-t-3xl flex flex-col"
+        style={{ boxShadow: '0 -8px 40px oklch(0.22 0.01 260 / 0.14)', maxHeight: '80dvh' }}
+      >
+        {/* Sticky header */}
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 shrink-0">
+          <div className="w-9 h-9 rounded-2xl bg-secondary flex items-center justify-center">
+            {icon}
+          </div>
+          <h3 className="flex-1 text-base font-bold text-foreground">{title}</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+            aria-label="Close"
+          >
+            <X size={15} strokeWidth={2} className="text-foreground" />
+          </button>
+        </div>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto px-5 pb-8 flex flex-col gap-0">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FuelDetailModal({ log, onClose }: { log: FuelLog; onClose: () => void }) {
+  return (
+    <DetailModal title="Fuel Entry Details" icon={<Fuel size={16} strokeWidth={1.75} className="text-primary" />} onClose={onClose}>
+      <DetailRow label="Date" value={formatDate(log.date)} />
+      <DetailRow label="Amount Paid" value={`Rs.${log.amount.toLocaleString('en-IN')}`} />
+      <DetailRow label="Litres" value={`${log.litres.toFixed(2)} L`} />
+      <DetailRow label="Price / Litre" value={`Rs.${log.pricePerLitre}/L`} />
+      <DetailRow label="Odometer" value={log.odometer ? `${log.odometer.toLocaleString('en-IN')} km` : null} />
+      <DetailRow label="Notes" value={log.notes} />
+    </DetailModal>
+  )
+}
+
+function ServiceDetailModal({ log, onClose }: { log: ServiceLog; onClose: () => void }) {
+  return (
+    <DetailModal title="Service Entry Details" icon={<Wrench size={16} strokeWidth={1.75} className="text-primary" />} onClose={onClose}>
+      <DetailRow label="Date" value={formatDate(log.date)} />
+      <DetailRow label="Service Type" value={log.serviceType} />
+      <DetailRow label="Expense" value={`Rs.${log.expense.toLocaleString('en-IN')}`} />
+      <DetailRow label="Odometer" value={log.odometer ? `${log.odometer.toLocaleString('en-IN')} km` : null} />
+      <DetailRow label="Notes" value={log.notes} />
+    </DetailModal>
+  )
+}
+
+function ReminderDetailModal({ reminder, onClose }: { reminder: Reminder; onClose: () => void }) {
+  const overdue = isReminderOverdue(reminder)
+  const daysUntil = getReminderDaysUntil(reminder)
+  const statusLabel = reminder.isCompleted ? 'Completed' : overdue ? 'Overdue' : daysUntil === 0 ? 'Due Today' : `${daysUntil} day(s) left`
+  return (
+    <DetailModal title="Reminder Details" icon={<Bell size={16} strokeWidth={1.75} className="text-primary" />} onClose={onClose}>
+      <DetailRow label="Title" value={reminder.title} />
+      <DetailRow label="Type" value={reminder.type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} />
+      <DetailRow label="Due Date" value={formatDate(reminder.dueDate)} />
+      <DetailRow label="Status" value={statusLabel} />
+      <DetailRow label="Due Mileage" value={reminder.dueMileage ? `${reminder.dueMileage.toLocaleString('en-IN')} km` : null} />
+      <DetailRow label="Notes" value={reminder.notes} />
+    </DetailModal>
+  )
+}
+
+function DocumentDetailModal({ doc, onOpen, onClose }: { doc: VehicleDocument; onOpen: (url: string) => void; onClose: () => void }) {
+  const expired = isDocumentExpired(doc)
+  const expiringSoon = isDocumentExpiringSoon(doc)
+  const statusLabel = expired ? 'Expired' : expiringSoon ? 'Expiring Soon' : doc.expiryDate ? 'Valid' : 'No Expiry Set'
+  return (
+    <DetailModal title="Document Details" icon={<FileText size={16} strokeWidth={1.75} className="text-primary" />} onClose={onClose}>
+      <DetailRow label="Title" value={doc.title} />
+      <DetailRow label="Type" value={doc.type.toUpperCase()} />
+      <DetailRow label="Expiry Date" value={doc.expiryDate ? formatDate(doc.expiryDate) : null} />
+      <DetailRow label="Status" value={statusLabel} />
+      <DetailRow label="Notes" value={doc.notes} />
+      {doc.link && (
+        <div className="py-2.5">
+          <button
+            onClick={() => { onClose(); setTimeout(() => onOpen(doc.link!), 100) }}
+            className="flex items-center gap-2 text-sm font-semibold text-primary"
+          >
+            <ExternalLink size={14} strokeWidth={2} /> Open Document Link
+          </button>
+        </div>
+      )}
+    </DetailModal>
+  )
+}
+
 export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
   const { data, deleteVehicle, deleteFuelLog, deleteServiceLog, deleteReminder, completeReminder, deleteDocument } = useApp()
   const vehicle = data.vehicles.find(v => v.id === vehicleId)
@@ -93,6 +199,10 @@ export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
   const [editServiceLog, setEditServiceLog] = useState<ServiceLog | undefined>()
   const [editReminder, setEditReminder] = useState<Reminder | undefined>()
   const [editDocument, setEditDocument] = useState<VehicleDocument | undefined>()
+  const [viewFuelLog, setViewFuelLog] = useState<FuelLog | undefined>()
+  const [viewServiceLog, setViewServiceLog] = useState<ServiceLog | undefined>()
+  const [viewReminder, setViewReminder] = useState<Reminder | undefined>()
+  const [viewDocument, setViewDocument] = useState<VehicleDocument | undefined>()
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'vehicle' | 'fuel' | 'service' | 'reminder' | 'document'; id?: string } | null>(null)
   const [externalLinkWarning, setExternalLinkWarning] = useState<string | null>(null)
 
@@ -301,6 +411,9 @@ export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
                     {log.notes && <p className="text-xs text-muted-foreground mt-0.5 italic truncate">{log.notes}</p>}
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <button onClick={() => setViewFuelLog(log)} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center" aria-label="View details">
+                      <Eye size={13} strokeWidth={1.75} className="text-primary" />
+                    </button>
                     <button onClick={() => setEditFuelLog(log)} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center">
                       <Edit2 size={13} strokeWidth={1.75} className="text-foreground" />
                     </button>
@@ -342,6 +455,9 @@ export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
                     {log.notes && <p className="text-xs text-muted-foreground mt-0.5 italic truncate">{log.notes}</p>}
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <button onClick={() => setViewServiceLog(log)} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center" aria-label="View details">
+                      <Eye size={13} strokeWidth={1.75} className="text-primary" />
+                    </button>
                     <button onClick={() => setEditServiceLog(log)} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center">
                       <Edit2 size={13} strokeWidth={1.75} className="text-foreground" />
                     </button>
@@ -406,6 +522,9 @@ export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
                       {r.notes && <p className="text-xs text-muted-foreground mt-0.5 italic truncate">{r.notes}</p>}
                     </div>
                     <div className="flex gap-2 shrink-0">
+                      <button onClick={() => setViewReminder(r)} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center" aria-label="View details">
+                        <Eye size={13} strokeWidth={1.75} className="text-primary" />
+                      </button>
                       {!r.isCompleted && (
                         <button
                           onClick={() => { completeReminder(r.id); toast('Reminder completed') }}
@@ -495,6 +614,9 @@ export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
                       )}
                     </div>
                     <div className="flex gap-2 shrink-0">
+                      <button onClick={() => setViewDocument(doc)} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center" aria-label="View details">
+                        <Eye size={13} strokeWidth={1.75} className="text-primary" />
+                      </button>
                       <button onClick={() => setEditDocument(doc)} className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center">
                         <Edit2 size={13} strokeWidth={1.75} className="text-foreground" />
                       </button>
@@ -509,6 +631,12 @@ export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
           </div>
         )}
       </div>
+
+      {/* Detail view modals */}
+      {viewFuelLog && <FuelDetailModal log={viewFuelLog} onClose={() => setViewFuelLog(undefined)} />}
+      {viewServiceLog && <ServiceDetailModal log={viewServiceLog} onClose={() => setViewServiceLog(undefined)} />}
+      {viewReminder && <ReminderDetailModal reminder={viewReminder} onClose={() => setViewReminder(undefined)} />}
+      {viewDocument && <DocumentDetailModal doc={viewDocument} onOpen={(url) => setExternalLinkWarning(url)} onClose={() => setViewDocument(undefined)} />}
 
       {/* Modals */}
       {showFuelForm && <FuelLogForm vehicleId={vehicleId} onClose={() => setShowFuelForm(false)} />}
