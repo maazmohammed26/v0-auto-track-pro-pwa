@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Zap } from 'lucide-react'
+import { ArrowLeft, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { useApp } from '@/lib/context'
 import type { VehicleType, FuelType } from '@/lib/store'
@@ -33,6 +33,9 @@ const fuelTypes: { value: FuelType; label: string }[] = [
   { value: 'petrol+cng', label: 'Petrol + CNG' },
   { value: 'electric', label: 'Electric' },
 ]
+
+const inputClass =
+  'w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all'
 
 export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
   const { addVehicle, updateVehicle } = useApp()
@@ -85,21 +88,31 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/20 backdrop-blur-[2px]">
-      <div
-        className="w-full max-w-md bg-card rounded-t-3xl flex flex-col"
-        style={{ boxShadow: '0 -8px 40px oklch(0.22 0.01 260 / 0.14)', maxHeight: '92dvh' }}
-      >
-        {/* Header — sticky, never scrolls away */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
-          <h2 className="text-lg font-bold text-foreground">{isEdit ? 'Edit Vehicle' : 'Add Vehicle'}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-            <X size={16} strokeWidth={2} className="text-foreground" />
-          </button>
-        </div>
+    /* Full-screen page — no overlay, no fixed positioning, no BottomNav rendered */
+    <div className="min-h-screen bg-background flex flex-col">
 
-        {/* Scrollable form body */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto px-6 pb-8">
+      {/* Sticky header */}
+      <header className="sticky top-0 z-10 bg-background flex items-center gap-3 px-5 pt-12 pb-4"
+        style={{ borderBottom: '1px solid oklch(0.92 0.01 260)' }}>
+        <button
+          onClick={onClose}
+          className="w-9 h-9 rounded-2xl bg-secondary flex items-center justify-center shrink-0"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={18} strokeWidth={2} className="text-foreground" />
+        </button>
+        <h1 className="text-lg font-bold text-foreground">
+          {isEdit ? 'Edit Vehicle' : 'Add Vehicle'}
+        </h1>
+      </header>
+
+      {/* Scrollable form — grows to fill screen, natural scroll */}
+      <main className="flex-1 overflow-y-auto">
+        <form
+          id="vehicle-form"
+          onSubmit={handleSubmit}
+          className="px-5 py-6 flex flex-col gap-5"
+        >
           {/* Vehicle Type */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
@@ -112,7 +125,7 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
                   type="button"
                   onClick={() => setType(value)}
                   className={cn(
-                    'py-2 rounded-xl text-xs font-semibold border transition-all',
+                    'py-2.5 rounded-xl text-xs font-semibold border transition-all',
                     type === value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-secondary text-foreground border-transparent'
@@ -136,7 +149,7 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
                   type="button"
                   onClick={() => setFuelType(value)}
                   className={cn(
-                    'py-2.5 rounded-xl text-xs font-semibold border transition-all',
+                    'py-3 rounded-xl text-xs font-semibold border transition-all',
                     fuelType === value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-secondary text-foreground border-transparent'
@@ -147,7 +160,7 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
               ))}
             </div>
             {fuelType === 'electric' && (
-              <div className="mt-2 flex items-start gap-2 p-3 rounded-xl bg-[oklch(0.93_0.05_180)] text-[oklch(0.28_0.09_180)]">
+              <div className="mt-2.5 flex items-start gap-2 p-3 rounded-xl bg-[oklch(0.93_0.05_180)] text-[oklch(0.28_0.09_180)]">
                 <Zap size={14} strokeWidth={1.75} className="mt-0.5 shrink-0" />
                 <p className="text-xs leading-relaxed font-medium">
                   This vehicle is electric. Fuel tracking is not applicable.
@@ -163,7 +176,10 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
             { id: 'model', label: 'Model', value: model, set: setModel, placeholder: 'e.g. Swift VXI' },
           ].map(({ id, label, value, set, placeholder }) => (
             <div key={id}>
-              <label htmlFor={id} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+              <label
+                htmlFor={id}
+                className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block"
+              >
                 {label}
               </label>
               <input
@@ -171,7 +187,7 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
                 value={value}
                 onChange={e => { set(e.target.value); setErrors(prev => ({ ...prev, [id]: '' })) }}
                 placeholder={placeholder}
-                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                className={inputClass}
               />
               {errors[id] && <p className="text-destructive text-xs mt-1 font-medium">{errors[id]}</p>}
             </div>
@@ -179,32 +195,38 @@ export function AddVehicleForm({ onClose, editVehicle }: AddVehicleFormProps) {
 
           {/* Odometer */}
           <div>
-            <label htmlFor="odometer" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            <label
+              htmlFor="odometer"
+              className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block"
+            >
               Current Odometer (km)
             </label>
             <input
               id="odometer"
               type="number"
+              inputMode="numeric"
               value={odometer}
               onChange={e => { setOdometer(e.target.value); setErrors(prev => ({ ...prev, odometer: '' })) }}
               placeholder="e.g. 15000"
-              className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+              className={inputClass}
             />
             {errors.odometer && <p className="text-destructive text-xs mt-1 font-medium">{errors.odometer}</p>}
           </div>
-
-          <button
-            type="submit"
-            className="w-full py-4 rounded-2xl font-bold text-white text-sm mt-1 transition-all active:scale-95"
-            style={{ background: 'oklch(0.55 0.18 250)', boxShadow: '0 4px 16px oklch(0.55 0.18 250 / 0.3)' }}
-          >
-            {isEdit ? 'Save Changes' : 'Add Vehicle'}
-          </button>
-
-          {/* Safe-area spacer so the Submit button clears the floating nav */}
-          <div className="h-2" aria-hidden />
         </form>
-      </div>
+      </main>
+
+      {/* Submit button — pinned to bottom of screen, always visible, never behind nav */}
+      <footer className="shrink-0 px-5 py-4 bg-background"
+        style={{ borderTop: '1px solid oklch(0.92 0.01 260)', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <button
+          type="submit"
+          form="vehicle-form"
+          className="w-full py-4 rounded-2xl font-bold text-white text-sm transition-all active:scale-[0.98]"
+          style={{ background: 'oklch(0.55 0.18 250)', boxShadow: '0 4px 16px oklch(0.55 0.18 250 / 0.3)' }}
+        >
+          {isEdit ? 'Save Changes' : 'Add Vehicle'}
+        </button>
+      </footer>
     </div>
   )
 }

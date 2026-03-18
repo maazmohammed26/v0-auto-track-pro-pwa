@@ -11,6 +11,7 @@ import { VehicleDetail } from './VehicleDetail'
 import { OdometerReminder } from './OdometerReminder'
 import { LoadingScreen } from './LoadingScreen'
 import { PwaInstallPrompt } from './PwaInstallPrompt'
+import { AddVehicleForm } from './AddVehicleForm'
 
 type Tab = 'home' | 'insights' | 'settings'
 
@@ -18,6 +19,7 @@ export function AppShell() {
   const { data, vehiclesNeedingOdometerUpdate, setPwaPromptShown } = useApp()
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null)
+  const [showAddVehicle, setShowAddVehicle] = useState(false)
   const [showReminder, setShowReminder] = useState(false)
   const [splashDone, setSplashDone] = useState(false)
   const [reminderDismissed, setReminderDismissed] = useState(false)
@@ -64,6 +66,11 @@ export function AppShell() {
     return <Onboarding />
   }
 
+  // Add vehicle full-page view
+  if (showAddVehicle) {
+    return <AddVehicleForm onClose={() => setShowAddVehicle(false)} />
+  }
+
   // Vehicle detail view
   if (selectedVehicleId) {
     return (
@@ -89,6 +96,7 @@ export function AppShell() {
         <HomePage
           onSelectVehicle={(id) => { setSelectedVehicleId(id) }}
           onGoToSettings={() => setActiveTab('settings')}
+          onAddVehicle={() => setShowAddVehicle(true)}
         />
       </div>
       <div style={{ display: activeTab === 'insights' ? 'block' : 'none' }}>

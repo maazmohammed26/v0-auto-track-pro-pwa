@@ -1,19 +1,17 @@
 'use client'
 
-import { useState } from 'react'
 import { Plus, Car, UserCircle } from 'lucide-react'
 import { useApp } from '@/lib/context'
 import { VehicleCard } from './VehicleCard'
-import { AddVehicleForm } from './AddVehicleForm'
 
 interface HomePageProps {
   onSelectVehicle: (vehicleId: string) => void
   onGoToSettings: () => void
+  onAddVehicle: () => void
 }
 
-export function HomePage({ onSelectVehicle, onGoToSettings }: HomePageProps) {
+export function HomePage({ onSelectVehicle, onGoToSettings, onAddVehicle }: HomePageProps) {
   const { data } = useApp()
-  const [showAddVehicle, setShowAddVehicle] = useState(false)
 
   const firstName = data.userName.split(' ')[0]
   const hour = new Date().getHours()
@@ -79,7 +77,7 @@ export function HomePage({ onSelectVehicle, onGoToSettings }: HomePageProps) {
 
       {/* FAB */}
       <button
-        onClick={() => setShowAddVehicle(true)}
+        onClick={onAddVehicle}
         className="fixed bottom-28 right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center text-white transition-all active:scale-90"
         style={{
           background: 'oklch(0.55 0.18 250)',
@@ -89,8 +87,6 @@ export function HomePage({ onSelectVehicle, onGoToSettings }: HomePageProps) {
       >
         <Plus size={24} strokeWidth={2} />
       </button>
-
-      {showAddVehicle && <AddVehicleForm onClose={() => setShowAddVehicle(false)} />}
     </div>
   )
 }
