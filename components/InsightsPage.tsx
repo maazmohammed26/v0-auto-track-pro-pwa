@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { TrendingUp, Fuel, Wrench, Zap, BarChart2, Navigation, Eye, EyeOff } from 'lucide-react'
+import { TrendingUp, Fuel, Wrench, Zap, BarChart2, Navigation, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useApp } from '@/lib/context'
-import { getTotalDistanceDriven, calculateKmPerLiter, calculateKmPerCharge } from '@/lib/store'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { getTotalDistanceDriven } from '@/lib/store'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 type Timeframe = 'weekly' | 'monthly' | 'all'
 
@@ -17,7 +17,29 @@ function filterByTimeframe<T extends { date: string }>(items: T[], timeframe: Ti
   return items.filter(i => new Date(i.date) >= cutoff)
 }
 
-function fmt(n: number) { return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` }
+function fmt(n: number) {
+  return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+}
+
+// Utility functions for odometer calculations
+function getTotalOdometerDistance(vehicles: any[]): number {
+  return vehicles.reduce((sum, v) => sum + (v.currentOdometer || 0), 0)
+}
+
+function getOdometerByFuelType(vehicles: any[]): { fuel: number; electric: number } {
+  let fuel = 0
+  let electric = 0
+  
+  for (const v of vehicles) {
+    if (v.fuelType === 'electric') {
+      electric += v.currentOdometer || 0
+    } else {
+      fuel += v.currentOdometer || 0
+    }
+  }
+  
+  return { fuel, electric }
+}
 
 const COLORS = ['oklch(0.55 0.18 250)', 'oklch(0.65 0.15 145)', 'oklch(0.68 0.14 60)', 'oklch(0.60 0.16 310)']
 
@@ -25,7 +47,7 @@ export function InsightsPage() {
   const { data, toggleMileageTracking } = useApp()
   const [timeframe, setTimeframe] = useState<Timeframe>('monthly')
 
-  const { totalFuel, totalService, totalCharging, totalAll, totalDistance, perVehicle, fuelEfficiency, chartData } = useMemo(() => {
+  const { totalFuel, totalService, totalCharging, totalAll, totalOdometerDistance, fuelElectricSplit, perVehicle, chartData, mileageBreakdown } = useMemo(() => {
     const filteredFuel = filterByTimeframe(data.fuelLogs, timeframe)
     const filteredService = filterByTimeframe(data.serviceLogs, timeframe)
     const filteredCharging = filterByTimeframe(data.chargingLogs, timeframe)
@@ -34,7 +56,10 @@ export function InsightsPage() {
     const totalService = filteredService.reduce((s, l) => s + l.expense, 0)
     const totalCharging = filteredCharging.reduce((s, l) => s + l.amountSpent, 0)
     const totalAll = totalFuel + totalService + totalCharging
-    const totalDistance = getTotalDistanceDriven(data.vehicles, filteredFuel, filteredCharging)
+    
+    // Total odometer distance (combined from all vehicles)
+    const totalOdometerDistance = getTotalOdometerDistance(data.vehicles)
+    const fuelElectricSplit = getOdometerByFuelType(data.vehicles)
 
     const perVehicle = data.vehicles.map((v, i) => {
       const vFuel = filteredFuel.filter(l => l.vehicleId === v.id)
@@ -44,7 +69,6 @@ export function InsightsPage() {
       const serviceCost = vService.reduce((s, l) => s + l.expense, 0)
       const chargingCost = vCharging.reduce((s, l) => s + l.amountSpent, 0)
 
-      // Fuel efficiency: if logs have odometer readings, compute km/l
       let kmpl: number | null = null
       if (v.fuelType !== 'electric' && vFuel.length >= 2) {
         const withOdo = vFuel.filter(l => l.odometer).sort((a, b) => (a.odometer ?? 0) - (b.odometer ?? 0))
@@ -54,8 +78,7 @@ export function InsightsPage() {
           if (totalLitres > 0 && totalKm > 0) kmpl = totalKm / totalLitres
         }
       }
-      
-      // Charging efficiency for electric vehicles
+
       let kmpc: number | null = null
       if (v.fuelType === 'electric' && vCharging.length >= 2) {
         const withOdo = vCharging.filter(l => l.odometer).sort((a, b) => (a.odometer ?? 0) - (b.odometer ?? 0))
@@ -69,16 +92,30 @@ export function InsightsPage() {
       return { vehicle: v, fuelCost, serviceCost, chargingCost, total: fuelCost + serviceCost + chargingCost, kmpl, kmpc, color: COLORS[i % COLORS.length] }
     })
 
-    // Chart: per vehicle bar data
     const chartData = perVehicle.map(pv => ({
       name: pv.vehicle.name.length > 8 ? pv.vehicle.name.slice(0, 8) + '…' : pv.vehicle.name,
       Fuel: Math.round(pv.fuelCost),
       Service: Math.round(pv.serviceCost),
       Charging: Math.round(pv.chargingCost),
-      color: pv.color,
     }))
 
-    return { totalFuel, totalService, totalCharging, totalAll, totalDistance, perVehicle, fuelEfficiency: perVehicle.map(p => p.kmpl), chartData }
+    const fuelTypeGroups = data.vehicles.reduce((acc: Record<string, any[]>, v) => {
+      const key = v.fuelType
+      if (!acc[key]) acc[key] = []
+      acc[key].push(v)
+      return acc
+    }, {})
+
+    const mileageBreakdown = Object.entries(fuelTypeGroups).map(([fuelType, vehicles]) => {
+      const vData = perVehicle.filter(pv => pv.vehicle.fuelType === fuelType)
+      const avgMileage = vData
+        .filter(pv => (fuelType === 'electric' ? pv.kmpc !== null : pv.kmpl !== null))
+        .reduce((sum, pv) => sum + (fuelType === 'electric' ? pv.kmpc ?? 0 : pv.kmpl ?? 0), 0) / vData.length || 0
+
+      return { fuelType, count: vehicles.length, avgMileage, vehicles: vData }
+    })
+
+    return { totalFuel, totalService, totalCharging, totalAll, totalOdometerDistance, fuelElectricSplit, perVehicle, chartData, mileageBreakdown }
   }, [data, timeframe])
 
   const timeframes: { id: Timeframe; label: string }[] = [
@@ -87,14 +124,20 @@ export function InsightsPage() {
     { id: 'all', label: 'All time' },
   ]
 
+  const fuelTypeLabels = {
+    petrol: { label: 'Petrol', icon: '⛽', unit: 'km/L', color: 'bg-[oklch(0.93_0.06_250)]', textColor: 'text-[oklch(0.38_0.12_250)]' },
+    diesel: { label: 'Diesel', icon: '🛢️', unit: 'km/L', color: 'bg-[oklch(0.93_0.05_60)]', textColor: 'text-[oklch(0.42_0.10_60)]' },
+    'petrol+cng': { label: 'Petrol + CNG', icon: '⛽', unit: 'km/L', color: 'bg-[oklch(0.93_0.05_145)]', textColor: 'text-[oklch(0.36_0.09_145)]' },
+    electric: { label: 'Electric', icon: '⚡', unit: 'km/charge', color: 'bg-[oklch(0.93_0.05_180)]', textColor: 'text-[oklch(0.36_0.09_180)]' },
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="px-5 pt-14 pb-4">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Insights</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Your expense overview</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Your expense & mileage overview</p>
           </div>
           <button
             onClick={toggleMileageTracking}
@@ -110,16 +153,13 @@ export function InsightsPage() {
         </div>
       </div>
 
-      {/* Timeframe filter */}
       <div className="px-5 mb-5">
         <div className="flex gap-2 p-1 bg-secondary rounded-2xl">
           {timeframes.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setTimeframe(id)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                timeframe === id ? 'bg-card text-foreground' : 'text-muted-foreground'
-              }`}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${timeframe === id ? 'bg-card text-foreground' : 'text-muted-foreground'}`}
               style={timeframe === id ? { boxShadow: 'var(--shadow-clay)' } : {}}
             >
               {label}
@@ -129,7 +169,6 @@ export function InsightsPage() {
       </div>
 
       <div className="px-5 pb-36 flex flex-col gap-4">
-        {/* Total summary */}
         <div className="clay-card p-5">
           <p className="text-xs text-muted-foreground font-medium mb-1">Total Spend</p>
           <p className="text-3xl font-bold text-foreground mb-4">{fmt(totalAll)}</p>
@@ -166,26 +205,97 @@ export function InsightsPage() {
           </div>
         </div>
 
-        {/* Total Distance KPI */}
         {data.mileageTrackingEnabled && (
           <div className="clay-card p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground font-medium mb-1">Total Distance</p>
-                <p className="text-3xl font-bold text-foreground">{totalDistance.toLocaleString('en-IN')} km</p>
-                {totalDistance === 0 && <p className="text-xs text-muted-foreground mt-1">Add fuel/charging logs with odometer readings</p>}
+            <div className="mb-4">
+              <p className="text-xs text-muted-foreground font-medium mb-1">Total Distance</p>
+              <p className="text-3xl font-bold text-foreground">{totalOdometerDistance.toLocaleString('en-IN')} km</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <div className="flex-1 bg-gradient-to-br from-[oklch(0.94_0.04_10)] to-[oklch(0.91_0.06_0)] rounded-2xl p-4 border border-[oklch(0.73_0.06_10)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-[oklch(0.58_0.16_0)]" />
+                  <p className="text-xs font-bold text-[oklch(0.42_0.10_0)]">Fuel Vehicles</p>
+                </div>
+                <p className="text-2xl font-bold text-[oklch(0.42_0.10_0)]">{fuelElectricSplit.fuel.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[oklch(0.50_0.08_0)] font-medium mt-1">km combined</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-[oklch(0.93_0.06_250)] flex items-center justify-center">
-                <Navigation size={24} strokeWidth={1.5} className="text-[oklch(0.38_0.12_250)]" />
+              
+              <div className="flex-1 bg-gradient-to-br from-[oklch(0.94_0.04_140)] to-[oklch(0.91_0.06_135)] rounded-2xl p-4 border border-[oklch(0.73_0.06_140)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-[oklch(0.58_0.16_140)]" />
+                  <p className="text-xs font-bold text-[oklch(0.40_0.10_140)]">Electric Vehicles</p>
+                </div>
+                <p className="text-2xl font-bold text-[oklch(0.40_0.10_140)]">{fuelElectricSplit.electric.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[oklch(0.50_0.08_140)] font-medium mt-1">km combined</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Bar chart */}
+        {data.mileageTrackingEnabled && mileageBreakdown.length > 0 && (
+          <div className="clay-card p-5">
+            <p className="text-sm font-bold text-foreground mb-4">Mileage Efficiency by Fuel Type</p>
+            <div className="space-y-3">
+              {mileageBreakdown.map(({ fuelType, count, avgMileage, vehicles }) => {
+                const typeInfo = fuelTypeLabels[fuelType as keyof typeof fuelTypeLabels]
+                const showCombined = count > 1
+                const unit = typeInfo.unit
+
+                return (
+                  <div key={fuelType}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${typeInfo.color} ${typeInfo.textColor}`}>
+                          {typeInfo.label}
+                        </span>
+                        {count > 1 && <span className="text-xs text-muted-foreground font-medium">({count} vehicles)</span>}
+                      </div>
+                    </div>
+
+                    {showCombined && avgMileage > 0 && (
+                      <div className={`${typeInfo.color} rounded-xl p-3 mb-2`}>
+                        <div className="flex items-center gap-1 mb-1">
+                          <TrendingUp size={12} strokeWidth={2} className={typeInfo.textColor} />
+                          <p className={`text-[10px] font-semibold ${typeInfo.textColor}`}>Combined Average</p>
+                        </div>
+                        <p className={`text-lg font-bold ${typeInfo.textColor}`}>{avgMileage.toFixed(1)} {unit}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2">
+                      {vehicles.map(({ vehicle, kmpl, kmpc }) => {
+                        const mileage = fuelType === 'electric' ? kmpc : kmpl
+                        return (
+                          <div key={vehicle.id} className="flex items-center justify-between bg-secondary rounded-lg p-2.5 text-xs">
+                            <span className="text-foreground font-medium truncate">{vehicle.name}</span>
+                            {mileage ? (
+                              <span className={`font-bold ${typeInfo.textColor}`}>{mileage.toFixed(1)} {unit}</span>
+                            ) : (
+                              <span className="text-muted-foreground text-[10px]">No data</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="flex gap-2 mt-4 p-3 bg-[oklch(0.93_0.05_60)] rounded-lg">
+              <AlertCircle size={14} strokeWidth={2} className="text-[oklch(0.42_0.10_60)] shrink-0 mt-0.5" />
+              <p className="text-[11px] text-[oklch(0.42_0.10_60)] font-medium">
+                Mileage results may not be fully accurate as they are based on user inputs and odometer calculations.
+              </p>
+            </div>
+          </div>
+        )}
+
         {chartData.length > 0 && (
           <div className="clay-card p-5">
-            <p className="text-sm font-bold text-foreground mb-4">Per Vehicle</p>
+            <p className="text-sm font-bold text-foreground mb-4">Per Vehicle Expenses</p>
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={chartData} barGap={4}>
                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'oklch(0.52 0.01 260)', fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -216,7 +326,6 @@ export function InsightsPage() {
           </div>
         )}
 
-        {/* Per vehicle breakdown */}
         {perVehicle.length === 0 ? (
           <div className="clay-card p-10 flex flex-col items-center gap-3 text-center">
             <BarChart2 size={36} strokeWidth={1.5} className="text-muted-foreground" />
@@ -234,9 +343,9 @@ export function InsightsPage() {
                 <p className="text-base font-bold text-foreground">{fmt(total)}</p>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 {vehicle.fuelType !== 'electric' && (
-                  <div className="flex-1 bg-secondary rounded-2xl p-3">
+                  <div className="flex-1 bg-secondary rounded-2xl p-3 min-w-[calc(50%-6px)]">
                     <div className="flex items-center gap-1 mb-1">
                       <Fuel size={12} strokeWidth={1.75} className="text-primary" />
                       <p className="text-[10px] text-muted-foreground font-medium">Fuel</p>
@@ -244,7 +353,7 @@ export function InsightsPage() {
                     <p className="text-sm font-bold text-foreground">{fmt(fuelCost)}</p>
                   </div>
                 )}
-                <div className="flex-1 bg-secondary rounded-2xl p-3">
+                <div className="flex-1 bg-secondary rounded-2xl p-3 min-w-[calc(50%-6px)]">
                   <div className="flex items-center gap-1 mb-1">
                     <Wrench size={12} strokeWidth={1.75} className="text-primary" />
                     <p className="text-[10px] text-muted-foreground font-medium">Service</p>
@@ -252,7 +361,7 @@ export function InsightsPage() {
                   <p className="text-sm font-bold text-foreground">{fmt(serviceCost)}</p>
                 </div>
                 {vehicle.fuelType === 'electric' && chargingCost > 0 && (
-                  <div className="flex-1 bg-[oklch(0.93_0.05_180)] rounded-2xl p-3">
+                  <div className="flex-1 bg-[oklch(0.93_0.05_180)] rounded-2xl p-3 min-w-[calc(50%-6px)]">
                     <div className="flex items-center gap-1 mb-1">
                       <Zap size={12} strokeWidth={1.75} className="text-[oklch(0.36_0.09_180)]" />
                       <p className="text-[10px] text-[oklch(0.36_0.09_180)] font-medium">Charging</p>
@@ -261,7 +370,7 @@ export function InsightsPage() {
                   </div>
                 )}
                 {data.mileageTrackingEnabled && vehicle.fuelType !== 'electric' && kmpl && (
-                  <div className="flex-1 bg-secondary rounded-2xl p-3">
+                  <div className="flex-1 bg-secondary rounded-2xl p-3 min-w-[calc(50%-6px)]">
                     <div className="flex items-center gap-1 mb-1">
                       <TrendingUp size={12} strokeWidth={1.75} className="text-primary" />
                       <p className="text-[10px] text-muted-foreground font-medium">km/L</p>
@@ -270,7 +379,7 @@ export function InsightsPage() {
                   </div>
                 )}
                 {data.mileageTrackingEnabled && vehicle.fuelType === 'electric' && kmpc && (
-                  <div className="flex-1 bg-[oklch(0.93_0.05_180)] rounded-2xl p-3">
+                  <div className="flex-1 bg-[oklch(0.93_0.05_180)] rounded-2xl p-3 min-w-[calc(50%-6px)]">
                     <div className="flex items-center gap-1 mb-1">
                       <TrendingUp size={12} strokeWidth={1.75} className="text-[oklch(0.36_0.09_180)]" />
                       <p className="text-[10px] text-[oklch(0.36_0.09_180)] font-medium">km/charge</p>
@@ -279,7 +388,7 @@ export function InsightsPage() {
                   </div>
                 )}
                 {vehicle.fuelType === 'electric' && !kmpc && chargingCost === 0 && (
-                  <div className="flex-1 bg-[oklch(0.93_0.05_180)] rounded-2xl p-3">
+                  <div className="flex-1 bg-[oklch(0.93_0.05_180)] rounded-2xl p-3 min-w-[calc(50%-6px)]">
                     <div className="flex items-center gap-1 mb-1">
                       <Zap size={12} strokeWidth={1.75} className="text-[oklch(0.36_0.09_180)]" />
                       <p className="text-[10px] text-[oklch(0.36_0.09_180)] font-medium">Electric</p>

@@ -278,23 +278,44 @@ export function getTotalDistanceDriven(vehicles: Vehicle[], fuelLogs: FuelLog[],
   let totalDistance = 0
   
   for (const vehicle of vehicles) {
+    // Get all logs with odometer readings for this vehicle
+    const vehicleFuelLogs = fuelLogs.filter(l => l.vehicleId === vehicle.id && l.odometer !== undefined)
+    const vehicleChargingLogs = chargingLogs.filter(l => l.vehicleId === vehicle.id && l.odometer !== undefined)
+    
+    // Combine and sort by odometer reading and date
     const allLogs = [
-      ...fuelLogs.filter(l => l.vehicleId === vehicle.id && l.odometer),
-      ...chargingLogs.filter(l => l.vehicleId === vehicle.id && l.odometer)
-    ].sort((a, b) => {
-      const aOdo = 'odometer' in a ? a.odometer ?? 0 : 0
-      const bOdo = 'odometer' in b ? b.odometer ?? 0 : 0
-      return aOdo - bOdo
-    })
+      ...vehicleFuelLogs.map(l => ({ odometer: l.odometer!, date: l.date })),
+      ...vehicleChargingLogs.map(l => ({ odometer: l.odometer!, date: l.date }))
+    ].sort((a, b) => a.odometer - b.odometer)
     
     if (allLogs.length > 0) {
-      const firstOdo = ('odometer' in allLogs[0] ? allLogs[0].odometer : 0) ?? 0
-      const lastOdo = ('odometer' in allLogs[allLogs.length - 1] ? allLogs[allLogs.length - 1].odometer : 0) ?? 0
+      const firstOdo = allLogs[0].odometer
+      const lastOdo = allLogs[allLogs.length - 1].odometer
       totalDistance += Math.max(0, lastOdo - firstOdo)
     }
   }
   
   return Math.round(totalDistance)
+}
+
+// Odometer distance helper functions
+export function getTotalOdometerDistance(vehicles: Vehicle[]): number {
+  return vehicles.reduce((sum, v) => sum + (v.currentOdometer || 0), 0)
+}
+
+export function getOdometerByFuelType(vehicles: Vehicle[]): { fuel: number; electric: number } {
+  let fuel = 0
+  let electric = 0
+  
+  for (const v of vehicles) {
+    if (v.fuelType === 'electric') {
+      electric += v.currentOdometer || 0
+    } else {
+      fuel += v.currentOdometer || 0
+    }
+  }
+  
+  return { fuel, electric }
 }
 
 // Smart reminder helpers
