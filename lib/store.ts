@@ -298,6 +298,7 @@ export function getTotalDistanceDriven(vehicles: Vehicle[], fuelLogs: FuelLog[],
   return Math.round(totalDistance)
 }
 
+// Odometer distance functions
 export function getTotalOdometerDistance(vehicles: Vehicle[]): number {
   return vehicles.reduce((sum, v) => sum + (v.currentOdometer || 0), 0)
 }
@@ -315,8 +316,6 @@ export function getOdometerByFuelType(vehicles: Vehicle[]): { fuel: number; elec
   }
   
   return { fuel, electric }
-}
-  return Math.round(totalDistance)
 }
 
 // Smart reminder helpers
