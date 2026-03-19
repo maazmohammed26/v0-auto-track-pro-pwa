@@ -7,6 +7,7 @@ import { ExternalLink } from 'lucide-react'
 interface Service {
   id: string
   name: string
+  description: string
   logo: string
   url: string
   displayName: string
@@ -16,6 +17,7 @@ const services: Service[] = [
   {
     id: 'carinfo',
     name: 'RC Details',
+    description: 'RC Search',
     displayName: 'CarInfo',
     logo: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-removebg-preview%20%281%29-eJ1JVt8gE03F4eqaGScH5Y84cQ9ASj.png',
     url: 'https://www.carinfo.app/rc-search',
@@ -23,6 +25,7 @@ const services: Service[] = [
   {
     id: 'traffic',
     name: 'Bangalore Traffic Challan',
+    description: 'BTP Fine Check',
     displayName: 'Traffic Police',
     logo: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-removebg-preview%20%282%29-vyAATSgnq4JAC3FrAjIPix4aaMqAZn.png',
     url: 'https://kspapp.ksp.gov.in/ksp/api/traffic-challan',
@@ -30,6 +33,7 @@ const services: Service[] = [
   {
     id: 'dl-status',
     name: 'Driving License Status',
+    description: 'License Check',
     displayName: 'Parivahan Seva',
     logo: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-removebg-preview%20%284%29-Aq1FEohKWoYnBhUs025NwXfAkPBIc0.png',
     url: 'https://parivahan.gov.in/rcdlstatus/?pur_cd=101',
@@ -37,6 +41,7 @@ const services: Service[] = [
   {
     id: 'challan',
     name: 'Parivahan Challan',
+    description: 'Challan Check',
     displayName: 'Parivahan Seva',
     logo: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-removebg-preview%20%284%29-Aq1FEohKWoYnBhUs025NwXfAkPBIc0.png',
     url: 'https://echallan.parivahan.gov.in/index/accused-challan',
@@ -82,8 +87,11 @@ export function ProductsPage() {
                 alt={service.displayName}
                 className="w-16 h-16 md:w-20 md:h-20 object-contain mb-3"
               />
-              <span className="text-xs md:text-sm font-medium text-center text-foreground">
+              <span className="text-xs md:text-sm font-medium text-center text-foreground mb-1">
                 {service.displayName}
+              </span>
+              <span className="text-[10px] text-muted-foreground font-medium text-center">
+                {service.description}
               </span>
               <ExternalLink size={14} className="absolute top-2 right-2 text-muted-foreground group-hover:text-foreground transition-colors opacity-0 group-hover:opacity-100" />
             </button>

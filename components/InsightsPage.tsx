@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { TrendingUp, Fuel, Wrench, Zap, BarChart2, Navigation, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useApp } from '@/lib/context'
-import { getTotalDistanceDriven, getTotalOdometerDistance, getOdometerByFuelType } from '@/lib/store'
+import { getTotalDistanceDriven } from '@/lib/store'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 type Timeframe = 'weekly' | 'monthly' | 'all'
@@ -19,6 +19,26 @@ function filterByTimeframe<T extends { date: string }>(items: T[], timeframe: Ti
 
 function fmt(n: number) {
   return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+}
+
+// Utility functions for odometer calculations
+function getTotalOdometerDistance(vehicles: any[]): number {
+  return vehicles.reduce((sum, v) => sum + (v.currentOdometer || 0), 0)
+}
+
+function getOdometerByFuelType(vehicles: any[]): { fuel: number; electric: number } {
+  let fuel = 0
+  let electric = 0
+  
+  for (const v of vehicles) {
+    if (v.fuelType === 'electric') {
+      electric += v.currentOdometer || 0
+    } else {
+      fuel += v.currentOdometer || 0
+    }
+  }
+  
+  return { fuel, electric }
 }
 
 const COLORS = ['oklch(0.55 0.18 250)', 'oklch(0.65 0.15 145)', 'oklch(0.68 0.14 60)', 'oklch(0.60 0.16 310)']
@@ -193,22 +213,22 @@ export function InsightsPage() {
             </div>
             
             <div className="flex gap-3">
-              <div className="flex-1 bg-gradient-to-br from-[oklch(0.93_0.06_120)] to-[oklch(0.90_0.08_110)] rounded-2xl p-4 border border-[oklch(0.70_0.10_120)]">
+              <div className="flex-1 bg-gradient-to-br from-[oklch(0.94_0.04_10)] to-[oklch(0.91_0.06_0)] rounded-2xl p-4 border border-[oklch(0.73_0.06_10)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-[oklch(0.55_0.20_120)]" />
-                  <p className="text-xs font-bold text-[oklch(0.35_0.12_120)]">Fuel Vehicles</p>
+                  <div className="w-6 h-6 rounded-full bg-[oklch(0.58_0.16_0)]" />
+                  <p className="text-xs font-bold text-[oklch(0.42_0.10_0)]">Fuel Vehicles</p>
                 </div>
-                <p className="text-2xl font-bold text-[oklch(0.35_0.12_120)]">{fuelElectricSplit.fuel.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-[oklch(0.45_0.10_120)] font-medium mt-1">km combined</p>
+                <p className="text-2xl font-bold text-[oklch(0.42_0.10_0)]">{fuelElectricSplit.fuel.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[oklch(0.50_0.08_0)] font-medium mt-1">km combined</p>
               </div>
               
-              <div className="flex-1 bg-gradient-to-br from-[oklch(0.93_0.08_0)] to-[oklch(0.90_0.10_350)] rounded-2xl p-4 border border-[oklch(0.70_0.12_0)]">
+              <div className="flex-1 bg-gradient-to-br from-[oklch(0.94_0.04_140)] to-[oklch(0.91_0.06_135)] rounded-2xl p-4 border border-[oklch(0.73_0.06_140)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-[oklch(0.60_0.22_0)]" />
-                  <p className="text-xs font-bold text-[oklch(0.38_0.14_0)]">Electric Vehicles</p>
+                  <div className="w-6 h-6 rounded-full bg-[oklch(0.58_0.16_140)]" />
+                  <p className="text-xs font-bold text-[oklch(0.40_0.10_140)]">Electric Vehicles</p>
                 </div>
-                <p className="text-2xl font-bold text-[oklch(0.38_0.14_0)]">{fuelElectricSplit.electric.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-[oklch(0.48_0.12_0)] font-medium mt-1">km combined</p>
+                <p className="text-2xl font-bold text-[oklch(0.40_0.10_140)]">{fuelElectricSplit.electric.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[oklch(0.50_0.08_140)] font-medium mt-1">km combined</p>
               </div>
             </div>
           </div>
