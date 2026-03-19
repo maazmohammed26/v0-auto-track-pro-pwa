@@ -40,9 +40,13 @@ interface AppContextValue {
   updateReminder: (id: string, updates: Partial<Reminder>) => void
   deleteReminder: (id: string) => void
   completeReminder: (id: string) => void
+  snoozeReminder: (id: string) => void
   addDocument: (d: Omit<VehicleDocument, 'id' | 'createdAt'>) => VehicleDocument
   updateDocument: (id: string, updates: Partial<VehicleDocument>) => void
   deleteDocument: (id: string) => void
+  snoozeDocumentAlert: (id: string) => void
+  dismissDocumentAlert: (id: string) => void
+  toggleMileageTracking: () => void
   setData: (data: AppData) => void
   setPwaPromptShown: () => void
   vehiclesNeedingOdometerUpdate: Vehicle[]
@@ -221,6 +225,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     persist({ ...data, reminders: data.reminders.map(r => r.id === id ? { ...r, isCompleted: true } : r) })
   }, [data, persist])
 
+  const snoozeReminder = useCallback((id: string) => {
+    persist({ ...data, reminders: data.reminders.map(r => r.id === id ? { ...r, lastSnoozedAt: new Date().toISOString() } : r) })
+  }, [data, persist])
+
   // Documents
   const addDocument = useCallback((d: Omit<VehicleDocument, 'id' | 'createdAt'>) => {
     const doc: VehicleDocument = { ...d, id: generateId(), createdAt: new Date().toISOString() }
@@ -234,6 +242,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteDocument = useCallback((id: string) => {
     persist({ ...data, documents: data.documents.filter(d => d.id !== id) })
+  }, [data, persist])
+
+  const snoozeDocumentAlert = useCallback((id: string) => {
+    persist({ ...data, documents: data.documents.map(d => d.id === id ? { ...d, lastAlertTime: new Date().toISOString() } : d) })
+  }, [data, persist])
+
+  const dismissDocumentAlert = useCallback((id: string) => {
+    persist({ ...data, documents: data.documents.map(d => d.id === id ? { ...d, alertDismissed: true } : d) })
+  }, [data, persist])
+
+  const toggleMileageTracking = useCallback(() => {
+    persist({ ...data, mileageTrackingEnabled: !data.mileageTrackingEnabled })
   }, [data, persist])
 
   const setData = useCallback((newData: AppData) => {
@@ -271,9 +291,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateReminder,
       deleteReminder,
       completeReminder,
+      snoozeReminder,
       addDocument,
       updateDocument,
       deleteDocument,
+      snoozeDocumentAlert,
+      dismissDocumentAlert,
+      toggleMileageTracking,
       setData,
       setPwaPromptShown,
       vehiclesNeedingOdometerUpdate,

@@ -29,6 +29,7 @@ export function ReminderForm({ vehicleId, onClose, editReminder }: ReminderFormP
   const [title, setTitle] = useState(editReminder?.title ?? '')
   const [dueDate, setDueDate] = useState(editReminder?.dueDate ?? '')
   const [dueMileage, setDueMileage] = useState(editReminder?.dueMileage?.toString() ?? '')
+  const [isMileageBased, setIsMileageBased] = useState(editReminder?.isMileageBased ?? false)
   const [notes, setNotes] = useState(editReminder?.notes ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -52,7 +53,11 @@ export function ReminderForm({ vehicleId, onClose, editReminder }: ReminderFormP
   function validate() {
     const errs: Record<string, string> = {}
     if (!title.trim()) errs.title = 'Title is required'
-    if (!dueDate) errs.dueDate = 'Due date is required'
+    if (isMileageBased) {
+      if (!dueMileage) errs.dueMileage = 'Due mileage is required for km-based reminders'
+    } else {
+      if (!dueDate) errs.dueDate = 'Due date is required'
+    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -65,9 +70,10 @@ export function ReminderForm({ vehicleId, onClose, editReminder }: ReminderFormP
       vehicleId,
       type,
       title: title.trim(),
-      dueDate,
+      dueDate: isMileageBased ? '' : dueDate,
       dueMileage: dueMileage ? Number(dueMileage) : undefined,
       notes: notes.trim() || undefined,
+      isMileageBased,
     }
 
     if (isEdit && editReminder) {
@@ -135,33 +141,66 @@ export function ReminderForm({ vehicleId, onClose, editReminder }: ReminderFormP
             {errors.title && <p className="text-destructive text-xs mt-1">{errors.title}</p>}
           </div>
 
-          {/* Due Date */}
+          {/* Reminder Mode Toggle */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Calendar size={12} strokeWidth={2} /> Due Date *
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
-              className={`${inputClass} ${errors.dueDate ? 'ring-2 ring-destructive/50' : ''}`}
-            />
-            {errors.dueDate && <p className="text-destructive text-xs mt-1">{errors.dueDate}</p>}
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Reminder Type</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMileageBased(false)}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+                  !isMileageBased ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                }`}
+              >
+                <Calendar size={13} strokeWidth={1.75} className="inline mr-1" /> Date-Based
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMileageBased(true)}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+                  isMileageBased ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                }`}
+              >
+                <Gauge size={13} strokeWidth={1.75} className="inline mr-1" /> KM-Based
+              </button>
+            </div>
           </div>
 
-          {/* Due Mileage (optional) */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Gauge size={12} strokeWidth={2} /> Due at Mileage (km) <span className="font-normal normal-case">(optional)</span>
-            </label>
-            <input
-              type="number"
-              value={dueMileage}
-              onChange={e => setDueMileage(e.target.value)}
-              placeholder={vehicle ? `Current: ${vehicle.currentOdometer.toLocaleString('en-IN')} km` : 'e.g. 50000'}
-              className={inputClass}
-            />
-          </div>
+          {/* Due Date (conditional) */}
+          {!isMileageBased && (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Calendar size={12} strokeWidth={2} /> Due Date *
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className={`${inputClass} ${errors.dueDate ? 'ring-2 ring-destructive/50' : ''}`}
+              />
+              {errors.dueDate && <p className="text-destructive text-xs mt-1">{errors.dueDate}</p>}
+            </div>
+          )}
+
+          {/* Due Mileage (conditional) */}
+          {isMileageBased && (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Gauge size={12} strokeWidth={2} /> Due at Mileage (km) *
+              </label>
+              <input
+                type="number"
+                value={dueMileage}
+                onChange={e => setDueMileage(e.target.value)}
+                placeholder={vehicle ? `Current: ${vehicle.currentOdometer.toLocaleString('en-IN')} km` : 'e.g. 50000'}
+                className={`${inputClass} ${errors.dueMileage ? 'ring-2 ring-destructive/50' : ''}`}
+              />
+              {errors.dueMileage && <p className="text-destructive text-xs mt-1">{errors.dueMileage}</p>}
+              {isMileageBased && vehicle && dueMileage && (
+                <p className="text-xs text-muted-foreground mt-2">Alert will trigger {Math.max(0, Number(dueMileage) - vehicle.currentOdometer).toLocaleString('en-IN')} km before due</p>
+              )}
+            </div>
+          )}
 
           {/* Notes */}
           <div>

@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { TrendingUp, Fuel, Wrench, Zap, BarChart2 } from 'lucide-react'
+import { TrendingUp, Fuel, Wrench, Zap, BarChart2, Navigation } from 'lucide-react'
 import { useApp } from '@/lib/context'
+import { getTotalDistanceDriven, calculateKmPerLiter, calculateKmPerCharge } from '@/lib/store'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 type Timeframe = 'weekly' | 'monthly' | 'all'
@@ -24,7 +25,7 @@ export function InsightsPage() {
   const { data } = useApp()
   const [timeframe, setTimeframe] = useState<Timeframe>('monthly')
 
-  const { totalFuel, totalService, totalCharging, totalAll, perVehicle, fuelEfficiency, chartData } = useMemo(() => {
+  const { totalFuel, totalService, totalCharging, totalAll, totalDistance, perVehicle, fuelEfficiency, chartData } = useMemo(() => {
     const filteredFuel = filterByTimeframe(data.fuelLogs, timeframe)
     const filteredService = filterByTimeframe(data.serviceLogs, timeframe)
     const filteredCharging = filterByTimeframe(data.chargingLogs, timeframe)
@@ -33,6 +34,7 @@ export function InsightsPage() {
     const totalService = filteredService.reduce((s, l) => s + l.expense, 0)
     const totalCharging = filteredCharging.reduce((s, l) => s + l.amountSpent, 0)
     const totalAll = totalFuel + totalService + totalCharging
+    const totalDistance = getTotalDistanceDriven(data.vehicles, filteredFuel, filteredCharging)
 
     const perVehicle = data.vehicles.map((v, i) => {
       const vFuel = filteredFuel.filter(l => l.vehicleId === v.id)
@@ -65,7 +67,7 @@ export function InsightsPage() {
       color: pv.color,
     }))
 
-    return { totalFuel, totalService, totalCharging, totalAll, perVehicle, fuelEfficiency: perVehicle.map(p => p.kmpl), chartData }
+    return { totalFuel, totalService, totalCharging, totalAll, totalDistance, perVehicle, fuelEfficiency: perVehicle.map(p => p.kmpl), chartData }
   }, [data, timeframe])
 
   const timeframes: { id: Timeframe; label: string }[] = [
@@ -137,6 +139,21 @@ export function InsightsPage() {
             )}
           </div>
         </div>
+
+        {/* Total Distance KPI */}
+        {totalDistance > 0 && (
+          <div className="clay-card p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground font-medium mb-1">Total Distance</p>
+                <p className="text-3xl font-bold text-foreground">{totalDistance.toLocaleString('en-IN')} km</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-[oklch(0.93_0.06_250)] flex items-center justify-center">
+                <Navigation size={24} strokeWidth={1.5} className="text-[oklch(0.38_0.12_250)]" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bar chart */}
         {chartData.length > 0 && (
