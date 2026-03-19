@@ -7,6 +7,7 @@ import { Onboarding } from './Onboarding'
 import { BottomNav } from './BottomNav'
 import { HomePage } from './HomePage'
 import { InsightsPage } from './InsightsPage'
+import { ProductsPage } from './ProductsPage'
 import { SettingsPage } from './SettingsPage'
 import { VehicleDetail } from './VehicleDetail'
 import { OdometerReminder } from './OdometerReminder'
@@ -15,7 +16,7 @@ import { LoadingScreen } from './LoadingScreen'
 import { PwaInstallPrompt } from './PwaInstallPrompt'
 import { AddVehicleForm } from './AddVehicleForm'
 
-type Tab = 'home' | 'insights' | 'settings'
+type Tab = 'home' | 'insights' | 'products' | 'settings'
 
 export function AppShell() {
   const { data, vehiclesNeedingOdometerUpdate, setPwaPromptShown, completeReminder, snoozeReminder } = useApp()
@@ -120,6 +121,9 @@ export function AppShell() {
       </div>
       <div style={{ display: activeTab === 'insights' ? 'block' : 'none' }}>
         <InsightsPage />
+      </div>
+      <div style={{ display: activeTab === 'products' ? 'block' : 'none' }}>
+        <ProductsPage />
       </div>
       <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
         <SettingsPage />
