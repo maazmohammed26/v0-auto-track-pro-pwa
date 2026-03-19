@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { ExternalLink } from 'lucide-react'
 
 interface Service {
   id: string
@@ -43,42 +43,7 @@ const services: Service[] = [
   },
 ]
 
-interface InAppBrowserProps {
-  url: string
-  onClose: () => void
-}
-
-function InAppBrowser({ url, onClose }: InAppBrowserProps) {
-  return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-end">
-      <div className="w-full bg-white rounded-t-2xl h-full flex flex-col max-h-screen">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-background sticky top-0">
-          <h2 className="text-sm font-medium text-foreground truncate flex-1 mr-4">External Service</h2>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 p-2 hover:bg-secondary rounded-lg transition-colors"
-            aria-label="Close browser"
-          >
-            <X size={20} className="text-foreground" />
-          </button>
-        </div>
-        
-        {/* Browser */}
-        <iframe
-          src={url}
-          className="flex-1 w-full border-0"
-          title="External Service"
-          allow="geolocation; microphone; camera"
-        />
-      </div>
-    </div>
-  )
-}
-
 export function ProductsPage() {
-  const [selectedService, setSelectedService] = useState<Service | null>(null)
-  const [showBrowser, setShowBrowser] = useState(false)
   const [confirmService, setConfirmService] = useState<Service | null>(null)
 
   const handleServiceClick = (service: Service) => {
@@ -87,15 +52,9 @@ export function ProductsPage() {
 
   const handleConfirm = () => {
     if (confirmService) {
-      setSelectedService(confirmService)
-      setShowBrowser(true)
+      window.open(confirmService.url, '_blank', 'noopener,noreferrer')
       setConfirmService(null)
     }
-  }
-
-  const handleClose = () => {
-    setShowBrowser(false)
-    setSelectedService(null)
   }
 
   return (
@@ -115,7 +74,7 @@ export function ProductsPage() {
             <button
               key={service.id}
               onClick={() => handleServiceClick(service)}
-              className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card hover:bg-secondary transition-colors active:scale-95"
+              className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card hover:bg-secondary transition-colors active:scale-95 group relative"
               aria-label={service.displayName}
             >
               <img
@@ -126,6 +85,7 @@ export function ProductsPage() {
               <span className="text-xs md:text-sm font-medium text-center text-foreground">
                 {service.displayName}
               </span>
+              <ExternalLink size={14} className="absolute top-2 right-2 text-muted-foreground group-hover:text-foreground transition-colors opacity-0 group-hover:opacity-100" />
             </button>
           ))}
         </div>
@@ -134,28 +94,23 @@ export function ProductsPage() {
       {/* Footer Note */}
       <div className="px-4 py-6 text-center border-t border-border mt-8">
         <p className="text-xs text-muted-foreground">
-          These are third-party websites and are not affiliated with AutoTrackPro. More services will be added soon.
+          These are third-party websites and are not affiliated with AutoTrackPro. Links open in a new tab. More services will be added soon.
         </p>
       </div>
 
       {/* Confirmation Dialog */}
       <AlertDialog open={!!confirmService} onOpenChange={() => setConfirmService(null)}>
         <AlertDialogContent>
-          <AlertDialogTitle>Redirect to External Service</AlertDialogTitle>
+          <AlertDialogTitle>Open External Service</AlertDialogTitle>
           <AlertDialogDescription>
-            You are being redirected to {confirmService?.displayName || 'a third-party website'}. This page will open inside AutoTrackPro.
+            You are being redirected to {confirmService?.displayName || 'a third-party website'}. This will open in a new tab.
           </AlertDialogDescription>
           <div className="flex gap-2 justify-end pt-4">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm}>Continue</AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirm}>Open</AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* In-App Browser */}
-      {showBrowser && selectedService && (
-        <InAppBrowser url={selectedService.url} onClose={handleClose} />
-      )}
     </div>
   )
 }
