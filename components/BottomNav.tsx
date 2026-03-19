@@ -1,9 +1,9 @@
 'use client'
 
-import { Home, BarChart2, Settings } from 'lucide-react'
+import { Home, BarChart2, Settings, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type Tab = 'home' | 'insights' | 'settings'
+type Tab = 'home' | 'insights' | 'products' | 'settings'
 
 interface BottomNavProps {
   active: Tab
@@ -13,6 +13,7 @@ interface BottomNavProps {
 const tabs: { id: Tab; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; label: string }[] = [
   { id: 'home', icon: Home, label: 'Home' },
   { id: 'insights', icon: BarChart2, label: 'Insights' },
+  { id: 'products', icon: Package, label: 'Products' },
   { id: 'settings', icon: Settings, label: 'Settings' },
 ]
 
