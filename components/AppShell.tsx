@@ -19,6 +19,7 @@ export function AppShell() {
   const { data, vehiclesNeedingOdometerUpdate, setPwaPromptShown } = useApp()
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null)
+  const [selectedVehicleTab, setSelectedVehicleTab] = useState<string | null>(null)
   const [showAddVehicle, setShowAddVehicle] = useState(false)
   const [showReminder, setShowReminder] = useState(false)
   const [splashDone, setSplashDone] = useState(false)
@@ -77,7 +78,8 @@ export function AppShell() {
       <>
         <VehicleDetail
           vehicleId={selectedVehicleId}
-          onBack={() => setSelectedVehicleId(null)}
+          initialTab={selectedVehicleTab}
+          onBack={() => { setSelectedVehicleId(null); setSelectedVehicleTab(null) }}
         />
         {showReminder && (
           <OdometerReminder
@@ -94,7 +96,7 @@ export function AppShell() {
       {/* Pages */}
       <div style={{ display: activeTab === 'home' ? 'block' : 'none' }}>
         <HomePage
-          onSelectVehicle={(id) => { setSelectedVehicleId(id) }}
+          onSelectVehicle={(id, tab) => { setSelectedVehicleId(id); setSelectedVehicleTab(tab || null) }}
           onGoToSettings={() => setActiveTab('settings')}
           onAddVehicle={() => setShowAddVehicle(true)}
         />

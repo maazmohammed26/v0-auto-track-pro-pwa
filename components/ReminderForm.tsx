@@ -197,7 +197,17 @@ export function ReminderForm({ vehicleId, onClose, editReminder }: ReminderFormP
               />
               {errors.dueMileage && <p className="text-destructive text-xs mt-1">{errors.dueMileage}</p>}
               {isMileageBased && vehicle && dueMileage && (
-                <p className="text-xs text-muted-foreground mt-2">Alert will trigger {Math.max(0, Number(dueMileage) - vehicle.currentOdometer).toLocaleString('en-IN')} km before due</p>
+                <div className="mt-3 p-2.5 rounded-xl bg-secondary text-xs text-muted-foreground leading-relaxed">
+                  <p className="mb-1.5">
+                    <strong>Current odometer:</strong> {vehicle.currentOdometer.toLocaleString('en-IN')} km
+                  </p>
+                  <p className="mb-1.5">
+                    <strong>Service due at:</strong> {Number(dueMileage).toLocaleString('en-IN')} km
+                  </p>
+                  <p>
+                    <strong>Alert will trigger at:</strong> {Math.max(0, Number(dueMileage) - 200).toLocaleString('en-IN')} km ({Math.max(0, Number(dueMileage) - 200 - vehicle.currentOdometer).toLocaleString('en-IN')} km away)
+                  </p>
+                </div>
               )}
             </div>
           )}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { TrendingUp, Fuel, Wrench, Zap, BarChart2, Navigation } from 'lucide-react'
+import { TrendingUp, Fuel, Wrench, Zap, BarChart2, Navigation, Eye, EyeOff } from 'lucide-react'
 import { useApp } from '@/lib/context'
 import { getTotalDistanceDriven, calculateKmPerLiter, calculateKmPerCharge } from '@/lib/store'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -22,7 +22,7 @@ function fmt(n: number) { return `₹${n.toLocaleString('en-IN', { maximumFracti
 const COLORS = ['oklch(0.55 0.18 250)', 'oklch(0.65 0.15 145)', 'oklch(0.68 0.14 60)', 'oklch(0.60 0.16 310)']
 
 export function InsightsPage() {
-  const { data } = useApp()
+  const { data, toggleMileageTracking } = useApp()
   const [timeframe, setTimeframe] = useState<Timeframe>('monthly')
 
   const { totalFuel, totalService, totalCharging, totalAll, totalDistance, perVehicle, fuelEfficiency, chartData } = useMemo(() => {
@@ -80,8 +80,23 @@ export function InsightsPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="px-5 pt-14 pb-4">
-        <h1 className="text-2xl font-bold text-foreground">Insights</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Your expense overview</p>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Insights</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Your expense overview</p>
+          </div>
+          <button
+            onClick={toggleMileageTracking}
+            className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center transition-all active:scale-95 hover:bg-secondary/80"
+            title={data.mileageTrackingEnabled ? 'Hide mileage data' : 'Show mileage data'}
+          >
+            {data.mileageTrackingEnabled ? (
+              <Eye size={18} strokeWidth={1.75} className="text-primary" />
+            ) : (
+              <EyeOff size={18} strokeWidth={1.75} className="text-muted-foreground" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Timeframe filter */}
@@ -141,7 +156,7 @@ export function InsightsPage() {
         </div>
 
         {/* Total Distance KPI */}
-        {totalDistance > 0 && (
+        {data.mileageTrackingEnabled && totalDistance > 0 && (
           <div className="clay-card p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
@@ -233,7 +248,7 @@ export function InsightsPage() {
                     <p className="text-sm font-bold text-foreground">{fmt(chargingCost)}</p>
                   </div>
                 )}
-                {kmpl && (
+                {data.mileageTrackingEnabled && kmpl && (
                   <div className="flex-1 bg-secondary rounded-2xl p-3">
                     <div className="flex items-center gap-1 mb-1">
                       <TrendingUp size={12} strokeWidth={1.75} className="text-primary" />
