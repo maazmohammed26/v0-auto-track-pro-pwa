@@ -74,7 +74,6 @@ export function InsightsPage() {
       Fuel: Math.round(pv.fuelCost),
       Service: Math.round(pv.serviceCost),
       Charging: Math.round(pv.chargingCost),
-      color: pv.color,
     }))
 
     const fuelTypeGroups = data.vehicles.reduce((acc: Record<string, any[]>, v) => {
@@ -86,10 +85,10 @@ export function InsightsPage() {
 
     const mileageBreakdown = Object.entries(fuelTypeGroups).map(([fuelType, vehicles]) => {
       const vData = perVehicle.filter(pv => pv.vehicle.fuelType === fuelType)
-      const validData = vData.filter(pv => (fuelType === 'electric' ? pv.kmpc !== null : pv.kmpl !== null))
-      const avgMileage = validData.length > 0
-        ? validData.reduce((sum, pv) => sum + (fuelType === 'electric' ? pv.kmpc ?? 0 : pv.kmpl ?? 0), 0) / validData.length
-        : 0
+      const avgMileage = vData
+        .filter(pv => (fuelType === 'electric' ? pv.kmpc !== null : pv.kmpl !== null))
+        .reduce((sum, pv) => sum + (fuelType === 'electric' ? pv.kmpc ?? 0 : pv.kmpl ?? 0), 0) / vData.length || 0
+
       return { fuelType, count: vehicles.length, avgMileage, vehicles: vData }
     })
 
@@ -137,9 +136,7 @@ export function InsightsPage() {
             <button
               key={id}
               onClick={() => setTimeframe(id)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                timeframe === id ? 'bg-card text-foreground' : 'text-muted-foreground'
-              }`}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${timeframe === id ? 'bg-card text-foreground' : 'text-muted-foreground'}`}
               style={timeframe === id ? { boxShadow: 'var(--shadow-clay)' } : {}}
             >
               {label}
@@ -214,7 +211,7 @@ export function InsightsPage() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${typeInfo.color} ${typeInfo.textColor}`}>
-                          {typeInfo.icon} {typeInfo.label}
+                          {typeInfo.label}
                         </span>
                         {count > 1 && <span className="text-xs text-muted-foreground font-medium">({count} vehicles)</span>}
                       </div>
