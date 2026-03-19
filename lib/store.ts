@@ -298,6 +298,27 @@ export function getTotalDistanceDriven(vehicles: Vehicle[], fuelLogs: FuelLog[],
   return Math.round(totalDistance)
 }
 
+export function getTotalOdometerDistance(vehicles: Vehicle[]): number {
+  return vehicles.reduce((sum, v) => sum + (v.currentOdometer || 0), 0)
+}
+
+export function getOdometerByFuelType(vehicles: Vehicle[]): { fuel: number; electric: number } {
+  let fuel = 0
+  let electric = 0
+  
+  for (const v of vehicles) {
+    if (v.fuelType === 'electric') {
+      electric += v.currentOdometer || 0
+    } else {
+      fuel += v.currentOdometer || 0
+    }
+  }
+  
+  return { fuel, electric }
+}
+  return Math.round(totalDistance)
+}
+
 // Smart reminder helpers
 export function isSmartReminderDue(reminder: Reminder, currentOdometer: number): boolean {
   if (reminder.isCompleted || !reminder.isMileageBased) return false

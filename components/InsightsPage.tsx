@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { TrendingUp, Fuel, Wrench, Zap, BarChart2, Navigation, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useApp } from '@/lib/context'
-import { getTotalDistanceDriven } from '@/lib/store'
+import { getTotalDistanceDriven, getTotalOdometerDistance, getOdometerByFuelType } from '@/lib/store'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 type Timeframe = 'weekly' | 'monthly' | 'all'
@@ -27,7 +27,7 @@ export function InsightsPage() {
   const { data, toggleMileageTracking } = useApp()
   const [timeframe, setTimeframe] = useState<Timeframe>('monthly')
 
-  const { totalFuel, totalService, totalCharging, totalAll, totalDistance, perVehicle, chartData, mileageBreakdown } = useMemo(() => {
+  const { totalFuel, totalService, totalCharging, totalAll, totalOdometerDistance, fuelElectricSplit, perVehicle, chartData, mileageBreakdown } = useMemo(() => {
     const filteredFuel = filterByTimeframe(data.fuelLogs, timeframe)
     const filteredService = filterByTimeframe(data.serviceLogs, timeframe)
     const filteredCharging = filterByTimeframe(data.chargingLogs, timeframe)
@@ -36,7 +36,10 @@ export function InsightsPage() {
     const totalService = filteredService.reduce((s, l) => s + l.expense, 0)
     const totalCharging = filteredCharging.reduce((s, l) => s + l.amountSpent, 0)
     const totalAll = totalFuel + totalService + totalCharging
-    const totalDistance = getTotalDistanceDriven(data.vehicles, filteredFuel, filteredCharging)
+    
+    // Total odometer distance (combined from all vehicles)
+    const totalOdometerDistance = getTotalOdometerDistance(data.vehicles)
+    const fuelElectricSplit = getOdometerByFuelType(data.vehicles)
 
     const perVehicle = data.vehicles.map((v, i) => {
       const vFuel = filteredFuel.filter(l => l.vehicleId === v.id)
@@ -92,7 +95,7 @@ export function InsightsPage() {
       return { fuelType, count: vehicles.length, avgMileage, vehicles: vData }
     })
 
-    return { totalFuel, totalService, totalCharging, totalAll, totalDistance, perVehicle, chartData, mileageBreakdown }
+    return { totalFuel, totalService, totalCharging, totalAll, totalOdometerDistance, fuelElectricSplit, perVehicle, chartData, mileageBreakdown }
   }, [data, timeframe])
 
   const timeframes: { id: Timeframe; label: string }[] = [
@@ -184,14 +187,28 @@ export function InsightsPage() {
 
         {data.mileageTrackingEnabled && (
           <div className="clay-card p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground font-medium mb-1">Total Distance</p>
-                <p className="text-3xl font-bold text-foreground">{totalDistance.toLocaleString('en-IN')} km</p>
-                {totalDistance === 0 && <p className="text-xs text-muted-foreground mt-1">Add fuel/charging logs with odometer readings</p>}
+            <div className="mb-4">
+              <p className="text-xs text-muted-foreground font-medium mb-1">Total Distance</p>
+              <p className="text-3xl font-bold text-foreground">{totalOdometerDistance.toLocaleString('en-IN')} km</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <div className="flex-1 bg-gradient-to-br from-[oklch(0.93_0.06_120)] to-[oklch(0.90_0.08_110)] rounded-2xl p-4 border border-[oklch(0.70_0.10_120)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-[oklch(0.55_0.20_120)]" />
+                  <p className="text-xs font-bold text-[oklch(0.35_0.12_120)]">Fuel Vehicles</p>
+                </div>
+                <p className="text-2xl font-bold text-[oklch(0.35_0.12_120)]">{fuelElectricSplit.fuel.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[oklch(0.45_0.10_120)] font-medium mt-1">km combined</p>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-[oklch(0.93_0.06_250)] flex items-center justify-center">
-                <Navigation size={24} strokeWidth={1.5} className="text-[oklch(0.38_0.12_250)]" />
+              
+              <div className="flex-1 bg-gradient-to-br from-[oklch(0.93_0.08_0)] to-[oklch(0.90_0.10_350)] rounded-2xl p-4 border border-[oklch(0.70_0.12_0)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-[oklch(0.60_0.22_0)]" />
+                  <p className="text-xs font-bold text-[oklch(0.38_0.14_0)]">Electric Vehicles</p>
+                </div>
+                <p className="text-2xl font-bold text-[oklch(0.38_0.14_0)]">{fuelElectricSplit.electric.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[oklch(0.48_0.12_0)] font-medium mt-1">km combined</p>
               </div>
             </div>
           </div>
@@ -199,7 +216,7 @@ export function InsightsPage() {
 
         {data.mileageTrackingEnabled && mileageBreakdown.length > 0 && (
           <div className="clay-card p-5">
-            <p className="text-sm font-bold text-foreground mb-4">Mileage by Fuel Type</p>
+            <p className="text-sm font-bold text-foreground mb-4">Mileage Efficiency by Fuel Type</p>
             <div className="space-y-3">
               {mileageBreakdown.map(({ fuelType, count, avgMileage, vehicles }) => {
                 const typeInfo = fuelTypeLabels[fuelType as keyof typeof fuelTypeLabels]
