@@ -6,7 +6,7 @@ import { isReminderUpcoming, isReminderOverdue } from '@/lib/store'
 import { VehicleCard } from './VehicleCard'
 
 interface HomePageProps {
-  onSelectVehicle: (vehicleId: string) => void
+  onSelectVehicle: (vehicleId: string, tab?: string) => void
   onGoToSettings: () => void
   onAddVehicle: () => void
 }
@@ -90,6 +90,8 @@ export function HomePage({ onSelectVehicle, onGoToSettings, onAddVehicle }: Home
                 reminders={data.reminders.filter(r => r.vehicleId === vehicle.id && !r.isCompleted)}
                 documents={data.documents.filter(d => d.vehicleId === vehicle.id)}
                 onClick={() => onSelectVehicle(vehicle.id)}
+                onNavigateToReminders={() => onSelectVehicle(vehicle.id, 'reminders')}
+                onNavigateToDocuments={() => onSelectVehicle(vehicle.id, 'documents')}
               />
             ))}
           </div>

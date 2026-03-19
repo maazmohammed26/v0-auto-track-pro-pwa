@@ -16,6 +16,7 @@ import { DocumentForm } from './DocumentForm'
 interface VehicleDetailProps {
   vehicleId: string
   onBack: () => void
+  initialTab?: string | null
 }
 
 type ActiveTab = 'overview' | 'fuel' | 'charging' | 'service' | 'reminders' | 'documents'
@@ -199,10 +200,10 @@ function DocumentDetailModal({ doc, onOpen, onClose }: { doc: VehicleDocument; o
   )
 }
 
-export function VehicleDetail({ vehicleId, onBack }: VehicleDetailProps) {
+export function VehicleDetail({ vehicleId, onBack, initialTab }: VehicleDetailProps) {
   const { data, deleteVehicle, deleteFuelLog, deleteServiceLog, deleteChargingLog, deleteReminder, completeReminder, deleteDocument } = useApp()
   const vehicle = data.vehicles.find(v => v.id === vehicleId)
-  const [activeTab, setActiveTab] = useState<ActiveTab>('overview')
+  const [activeTab, setActiveTab] = useState<ActiveTab>((initialTab as ActiveTab) || 'overview')
   const [showFuelForm, setShowFuelForm] = useState(false)
   const [showChargingForm, setShowChargingForm] = useState(false)
   const [showServiceForm, setShowServiceForm] = useState(false)
